@@ -1,8 +1,8 @@
 module.exports = {
     development: {
     'facebookAuth': {
-      'consumerKey': '856729794428418',
-      'consumerSecret': '50fdaa2293fc1bcbd9a0e9fb58410c13',
+      'consumerKey': '1634048820149915',
+      'consumerSecret': '081bff28eeee9da03c11a97c0bf142ee',
       'callbackUrl': 'http://socialfeed.com:8000/auth/facebook/callback'
         },
     'twitterAuth': {
