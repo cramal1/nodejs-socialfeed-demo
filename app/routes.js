@@ -7,11 +7,9 @@ module.exports = (app) => {
     let twitterConfig = app.config.auth.twitterAuth
     let networks = {
         twitter: {
-            network: {
-              icon: 'facebook',
-              name: 'Facebook',
+              icon: 'twitter',
+              name: 'twitter',
               class: 'btn-primary'
-            }
         }
     }
 
@@ -181,6 +179,118 @@ module.exports = (app) => {
         }
     }))
 
+    // Twitter - Reply
+    app.get('/reply/:id', isLoggedIn, then(async (req, res) => {
+        try{
+                let twitterClient = new Twitter({
+                    consumer_key: twitterConfig.consumerKey,
+                    consumer_secret: twitterConfig.consumerSecret,
+                    access_token_key: req.user.twitter.token,
+                    access_token_secret: req.user.twitter.tokenSecret
+                })
+                let id = req.params.id
+                let [tweet] = await twitterClient.promise.get('statuses/show/', {id})
+                  let post = {
+                    id: tweet.id_str,
+                    image: tweet.user.profile_image_url,
+                    text: tweet.text,
+                    name: tweet.user.name,
+                    username: '@' + tweet.user.screen_name,
+                    liked: tweet.favorited,
+                    network: networks.twitter
+                  }
+
+                console.log('post: ' + JSON.stringify(post))
+                console.log('post image: ' + post.image)
+                res.render('reply.ejs', {
+                    post: post
+                })}catch(e){
+                  console.log(e)
+                  //e.stack()
+                }
+    }))
+    // Twitter - post reply
+    app.post('/reply/:id', isLoggedIn, then(async (req, res) => {
+        try{
+                let status = req.body.text
+                console.log(status)
+                let twitterClient = new Twitter({
+                    consumer_key: twitterConfig.consumerKey,
+                    consumer_secret: twitterConfig.consumerSecret,
+                    access_token_key: req.user.twitter.token,
+                    access_token_secret: req.user.twitter.tokenSecret
+                })
+                if(status.length > 140){
+                    return req.flash('error', 'Status cannot be more than 140 characters!')
+                }
+
+                if(!status){
+                    return req.flash('error', 'Status cannot be empty!')
+                }
+                let id = req.params.id
+                await twitterClient.promise.post('statuses/update', {status: status, in_reply_to_status_id: id})
+                res.redirect('/timeline')
+            } catch (e){
+                console.log(e)
+            }
+    }))
+
+    // Twitter - Share
+    app.get('/share/:id', isLoggedIn, then(async (req, res) => {
+        try{
+                let twitterClient = new Twitter({
+                    consumer_key: twitterConfig.consumerKey,
+                    consumer_secret: twitterConfig.consumerSecret,
+                    access_token_key: req.user.twitter.token,
+                    access_token_secret: req.user.twitter.tokenSecret
+                })
+                let id = req.params.id
+                let [tweet] = await twitterClient.promise.get('statuses/show/', {id})
+                  let post = {
+                    id: tweet.id_str,
+                    image: tweet.user.profile_image_url,
+                    text: tweet.text,
+                    name: tweet.user.name,
+                    username: '@' + tweet.user.screen_name,
+                    liked: tweet.favorited,
+                    network: networks.twitter
+                  }
+
+                console.log('post: ' + JSON.stringify(post))
+                console.log('post image: ' + post.image)
+                res.render('share.ejs', {
+                    post: post
+                })}catch(e){
+                  console.log(e)
+                  //e.stack()
+                }
+    }))
+
+ // Twitter - share
+    app.post('/share/:id', isLoggedIn, then(async (req, res) => {
+        try{
+                let status = req.body.text
+                let twitterClient = new Twitter({
+                    consumer_key: twitterConfig.consumerKey,
+                    consumer_secret: twitterConfig.consumerSecret,
+                    access_token_key: req.user.twitter.token,
+                    access_token_secret: req.user.twitter.tokenSecret
+                })
+                if(status.length > 140){
+                    return req.flash('error', 'Status cannot be more than 140 characters!')
+                }
+
+                // if(!status){
+                //     return req.flash('error', 'Status cannot be empty!')
+                // }
+                let id = req.params.id
+                console.log('id: ' + id)
+                await twitterClient.promise.post('statuses/retweet', {id})
+                res.redirect('/timeline')
+            } catch (e){
+                console.log(e)
+            }
+    }))
 
 return passport
 
