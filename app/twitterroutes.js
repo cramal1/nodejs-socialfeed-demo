@@ -129,8 +129,19 @@ module.exports = (app) => {
             return req.flash('error', 'Status cannot be empty!')
         }
         await twitterClient.promise.post('statuses/update', {status})
-        res.redirect('/timeline')
 
+        let url = 'https://graph.facebook.com/v2.2/me/feed?message=' + status +'&access_token=' + req.user.facebook.token
+        console.log('URL: ' + url)
+         await request.promise.post(url,
+            nodeifyit(async (error, response, body) => {
+              if (!error && response.statusCode === 200) {
+                let dataFromServer = JSON.parse(body)
+                console.log('Data from FB: ' + JSON.stringify(dataFromServer))
+              } else {
+                console.log('Error: ' + error + '\nresponse: ' + response + '\nbody: ' + body)
+              }
+             res.redirect('/timeline')
+             }, {spread: true}))
     }))
 
     // Like
@@ -345,29 +356,44 @@ module.exports = (app) => {
     }))
 
  // Twitter - share
-    app.post('/share/:id', isLoggedIn, then(async (req, res) => {
-        try{
-                let status = req.body.text
-                let twitterClient = new Twitter({
-                    consumer_key: twitterConfig.consumerKey,
-                    consumer_secret: twitterConfig.consumerSecret,
-                    access_token_key: req.user.twitter.token,
-                    access_token_secret: req.user.twitter.tokenSecret
-                })
-                if(status.length > 140){
-                    return req.flash('error', 'Status cannot be more than 140 characters!')
-                }
-
-                // if(!status){
-                //     return req.flash('error', 'Status cannot be empty!')
-                // }
-                let id = req.params.id
-                console.log('id: ' + id)
-                await twitterClient.promise.post('statuses/retweet', {id})
-                res.redirect('/timeline')
-            } catch (e){
-                console.log(e)
+    app.post('/share/:network/:id', isLoggedIn, then(async (req, res) => {
+        let network = req.params.network
+        let id = req.params.id
+        let status = req.body.text
+        if(network === 'twitter'){
+            let twitterClient = new Twitter({
+                consumer_key: twitterConfig.consumerKey,
+                consumer_secret: twitterConfig.consumerSecret,
+                access_token_key: req.user.twitter.token,
+                access_token_secret: req.user.twitter.tokenSecret
+            })
+            if(status.length > 140){
+                return req.flash('error', 'Status cannot be more than 140 characters!')
             }
+
+            // if(!status){
+            //     return req.flash('error', 'Status cannot be empty!')
+            // }
+            let id = req.params.id
+            console.log('id: ' + id)
+            await twitterClient.promise.post('statuses/retweet', {id})
+            res.redirect('/timeline')
+        } else if (network === 'facebook'){
+            let url = 'https://graph.facebook.com/v2.2/' + id + '?status_type=shared_story&message=' + status + '&access_token=' + req.user.facebook.token
+            console.log('Reply to the post on URL: ' + url)
+             await request.promise.post(url,
+                nodeifyit(async (error, response, body) => {
+                  if (!error && response.statusCode === 200) {
+                    let dataFromServer = JSON.parse(body)
+                    let data = dataFromServer.data
+                    console.log('Data from FB: ' + JSON.stringify(data))
+                  } else {
+                    console.log('Error: ' + error + '\nresponse: ' + response + '\nbody: ' + body)
+                  }
+                res.redirect('/timeline')
+                 }, {spread: true}))
+        }
+
     }))
 
 return passport
