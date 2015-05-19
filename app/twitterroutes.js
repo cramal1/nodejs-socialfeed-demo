@@ -199,90 +199,149 @@ module.exports = (app) => {
     }))
 
     // Twitter - Reply
-    app.get('/reply/:id', isLoggedIn, then(async (req, res) => {
-        try{
-                let twitterClient = new Twitter({
-                    consumer_key: twitterConfig.consumerKey,
-                    consumer_secret: twitterConfig.consumerSecret,
-                    access_token_key: req.user.twitter.token,
-                    access_token_secret: req.user.twitter.tokenSecret
-                })
-                let id = req.params.id
-                let [tweet] = await twitterClient.promise.get('statuses/show/', {id})
-                  let post = {
-                    id: tweet.id_str,
-                    image: tweet.user.profile_image_url,
-                    text: tweet.text,
-                    name: tweet.user.name,
-                    username: '@' + tweet.user.screen_name,
-                    liked: tweet.favorited,
-                    network: networks.twitter
+    app.get('/reply/:network/:id', isLoggedIn, then(async (req, res) => {
+        let network = req.params.network
+        let id = req.params.id
+        if(network === 'twitter'){
+            let twitterClient = new Twitter({
+                consumer_key: twitterConfig.consumerKey,
+                consumer_secret: twitterConfig.consumerSecret,
+                access_token_key: req.user.twitter.token,
+                access_token_secret: req.user.twitter.tokenSecret
+            })
+            let [tweet] = await twitterClient.promise.get('statuses/show/', {id})
+              let post = {
+                id: tweet.id_str,
+                image: tweet.user.profile_image_url,
+                text: tweet.text,
+                name: tweet.user.name,
+                username: '@' + tweet.user.screen_name,
+                liked: tweet.favorited,
+                network: networks.twitter
+              }
+            res.render('reply.ejs', {
+                post: post
+            })
+        } else if (network === 'facebook') {
+            let url = 'https://graph.facebook.com/v2.2/' + id + '?access_token=' + req.user.facebook.token
+            console.log('URL: ' + url)
+            let post
+             await request.promise.get(url,
+                nodeifyit(async (error, response, body) => {
+                  if (!error && response.statusCode === 200) {
+                    let dataFromServer = JSON.parse(body)
+                    console.log('Data from FB: ' + JSON.stringify(dataFromServer))
+                    let isLiked = dataFromServer.likes ? true : false
+                    post = {
+                        id: dataFromServer.id,
+                        image: '',
+                        text: dataFromServer.message,
+                        name: dataFromServer.from.name,
+                        username: req.user.facebook.email,
+                        liked: isLiked,
+                        network: networks.facebook
+                    }
+                  } else {
+                    console.log('Error: ' + error + '\nresponse: ' + response + '\nbody: ' + body)
                   }
-
-                console.log('post: ' + JSON.stringify(post))
-                console.log('post image: ' + post.image)
                 res.render('reply.ejs', {
                     post: post
-                })}catch(e){
-                  console.log(e)
-                  //e.stack()
-                }
+                })
+                 }, {spread: true}))
+        }
     }))
     // Twitter - post reply
-    app.post('/reply/:id', isLoggedIn, then(async (req, res) => {
-        try{
-                let status = req.body.text
-                console.log(status)
-                let twitterClient = new Twitter({
-                    consumer_key: twitterConfig.consumerKey,
-                    consumer_secret: twitterConfig.consumerSecret,
-                    access_token_key: req.user.twitter.token,
-                    access_token_secret: req.user.twitter.tokenSecret
-                })
-                if(status.length > 140){
-                    return req.flash('error', 'Status cannot be more than 140 characters!')
-                }
-
-                if(!status){
-                    return req.flash('error', 'Status cannot be empty!')
-                }
-                let id = req.params.id
-                await twitterClient.promise.post('statuses/update', {status: status, in_reply_to_status_id: id})
-                res.redirect('/timeline')
-            } catch (e){
-                console.log(e)
+    app.post('/reply/:network/:id', isLoggedIn, then(async (req, res) => {
+        let network = req.params.network
+        let id = req.params.id
+        let status = req.body.text
+        if(network === 'twitter'){
+            console.log(status)
+            let twitterClient = new Twitter({
+                consumer_key: twitterConfig.consumerKey,
+                consumer_secret: twitterConfig.consumerSecret,
+                access_token_key: req.user.twitter.token,
+                access_token_secret: req.user.twitter.tokenSecret
+            })
+            if(status.length > 140){
+                return req.flash('error', 'Status cannot be more than 140 characters!')
             }
+
+            if(!status){
+                return req.flash('error', 'Status cannot be empty!')
+            }
+            let id = req.params.id
+            await twitterClient.promise.post('statuses/update', {status: status, in_reply_to_status_id: id})
+            res.redirect('/timeline')
+        } else if (network === 'facebook'){
+            let url = 'https://graph.facebook.com/v2.2/' + id + '/comments?message=' + status + '&access_token=' + req.user.facebook.token
+            console.log('Reply to the post on URL: ' + url)
+             await request.promise.post(url,
+                nodeifyit(async (error, response, body) => {
+                  if (!error && response.statusCode === 200) {
+                    let dataFromServer = JSON.parse(body)
+                    let data = dataFromServer.data
+                    console.log('Data from FB: ' + JSON.stringify(data))
+                  } else {
+                    console.log('Error: ' + error + '\nresponse: ' + response + '\nbody: ' + body)
+                  }
+                res.redirect('/timeline')
+                 }, {spread: true}))
+        }
+
     }))
 
     // Twitter - Share
-    app.get('/share/:id', isLoggedIn, then(async (req, res) => {
-        try{
-                let twitterClient = new Twitter({
-                    consumer_key: twitterConfig.consumerKey,
-                    consumer_secret: twitterConfig.consumerSecret,
-                    access_token_key: req.user.twitter.token,
-                    access_token_secret: req.user.twitter.tokenSecret
-                })
-                let id = req.params.id
-                let [tweet] = await twitterClient.promise.get('statuses/show/', {id})
-                  let post = {
-                    id: tweet.id_str,
-                    image: tweet.user.profile_image_url,
-                    text: tweet.text,
-                    name: tweet.user.name,
-                    username: '@' + tweet.user.screen_name,
-                    liked: tweet.favorited,
-                    network: networks.twitter
+    app.get('/share/:network/:id', isLoggedIn, then(async (req, res) => {
+        let network = req.params.network
+        let id = req.params.id
+        if(network === 'twitter'){
+            let twitterClient = new Twitter({
+                consumer_key: twitterConfig.consumerKey,
+                consumer_secret: twitterConfig.consumerSecret,
+                access_token_key: req.user.twitter.token,
+                access_token_secret: req.user.twitter.tokenSecret
+            })
+            let [tweet] = await twitterClient.promise.get('statuses/show/', {id})
+              let post = {
+                id: tweet.id_str,
+                image: tweet.user.profile_image_url,
+                text: tweet.text,
+                name: tweet.user.name,
+                username: '@' + tweet.user.screen_name,
+                liked: tweet.favorited,
+                network: networks.twitter
+              }
+            res.render('reply.ejs', {
+                post: post
+            })
+        } else if (network === 'facebook') {
+            let url = 'https://graph.facebook.com/v2.2/' + id + '?access_token=' + req.user.facebook.token
+            console.log('URL: ' + url)
+            let post
+             await request.promise.get(url,
+                nodeifyit(async (error, response, body) => {
+                  if (!error && response.statusCode === 200) {
+                    let dataFromServer = JSON.parse(body)
+                    console.log('Data from FB: ' + JSON.stringify(dataFromServer))
+                    let isLiked = dataFromServer.likes ? true : false
+                    post = {
+                        id: dataFromServer.id,
+                        image: '',
+                        text: dataFromServer.message,
+                        name: dataFromServer.from.name,
+                        username: req.user.facebook.email,
+                        liked: isLiked,
+                        network: networks.facebook
+                    }
+                  } else {
+                    console.log('Error: ' + error + '\nresponse: ' + response + '\nbody: ' + body)
                   }
-
-                console.log('post: ' + JSON.stringify(post))
-                console.log('post image: ' + post.image)
                 res.render('share.ejs', {
                     post: post
-                })}catch(e){
-                  console.log(e)
-                  //e.stack()
-                }
+                })
+                 }, {spread: true}))
+        }
     }))
 
  // Twitter - share
