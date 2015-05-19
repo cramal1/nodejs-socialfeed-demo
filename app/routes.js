@@ -39,7 +39,7 @@ module.exports = (app) => {
     }))
 
     // Facebook - Authentication route and callback URL
-	app.get('/auth/facebook', passport.authenticate('facebook', {scope}))
+	app.get('/auth/facebook', passport.authenticate('facebook', {scope: 'email, publish_actions, user_posts'}))
 
     app.get('/auth/facebook/callback', passport.authenticate('facebook', {
         successRedirect: '/profile',
@@ -48,7 +48,7 @@ module.exports = (app) => {
     }))
 
     // Authorization route and callback
-    app.get('/connect/facebook', passport.authorize('facebook', {scope}))
+    app.get('/connect/facebook', passport.authorize('facebook', {scope: ['email, publish_actions, user_posts']}))
     app.get('/connect/facebook/callback', passport.authorize('facebook', {
         successRedirect: '/profile',
         failureRedirect: '/profile',
@@ -67,6 +67,14 @@ module.exports = (app) => {
     // Authorization route and callback
     app.get('/connect/twitter', passport.authorize('twitter', {scope}))
     app.get('/connect/twitter/callback', passport.authorize('twitter', {
+        successRedirect: '/profile',
+        failureRedirect: '/profile',
+        failureFlash: true
+    }))
+
+    // Google - Authentication route and callback URL
+    app.get('/auth/google', passport.authenticate('google', {scope: 'https://www.googleapis.com/auth/plus.login email'}))
+    app.get('/auth/google/callback', passport.authenticate('google', {
         successRedirect: '/profile',
         failureRedirect: '/profile',
         failureFlash: true

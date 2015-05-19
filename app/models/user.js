@@ -28,6 +28,13 @@ let userSchema = mongoose.Schema({
     tokenSecret: String,
     username: String,
     name: String
+  },
+  google: {
+    id: String,
+    token: String,
+    tokenSecret: String,
+    email: String,
+    name: String
   }
 })
 

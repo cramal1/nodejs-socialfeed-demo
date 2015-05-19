@@ -6,6 +6,7 @@ let User = require('../models/user')
 let util = require('util')
 let FacebookStrategy = require('passport-facebook').Strategy
 let TwitterStrategy = require('passport-twitter').Strategy
+let GoogleStrategy = require('passport-google-oauth').OAuth2Strategy
 
 function useExternalPassportStrategy(OauthStrategy, config, field) {
   config.passReqToCallback = true
@@ -50,6 +51,8 @@ function useExternalPassportStrategy(OauthStrategy, config, field) {
         user = updateFacebookDetails(account, token, tokenSecret, user, field)
       } else if (field === 'twitter'){
         user = updateTwitterDetails(account, token, tokenSecret, user, field)
+      } else if (field === 'google'){
+        user = updateGoogleDetails(account, token, tokenSecret, user, field)
       }
       try{
         return await user.save()
@@ -88,6 +91,16 @@ function useExternalPassportStrategy(OauthStrategy, config, field) {
     user[fieldname].tokenSecret = tokenSecret
     return user
   }
+
+  function updateGoogleDetails(account, token, tokenSecret, user, fieldname){
+    console.log('Updating Google profile info to the user: ' + user)
+    user[fieldname].email = account.emails[0].value
+    user[fieldname].id = account.id
+    user[fieldname].name = account.displayName
+    user[fieldname].token = token
+    user[fieldname].tokenSecret = tokenSecret
+    return user
+  }
 }
 
 function configure(config) {
@@ -105,7 +118,6 @@ function configure(config) {
        callbackURL: config.facebookAuth.callbackUrl
      }, 'facebook')
 
-console.log('consumerKey: ' + config.twitterAuth.consumerKey)
 
   // Twitter Auth Strategy
   useExternalPassportStrategy(TwitterStrategy, {
@@ -113,8 +125,9 @@ console.log('consumerKey: ' + config.twitterAuth.consumerKey)
        consumerSecret: config.twitterAuth.consumerSecret,
        callbackURL: config.twitterAuth.callbackUrl
      }, 'twitter')
-  // useExternalPassportStrategy(LinkedInStrategy, {...}, 'google')
-  // useExternalPassportStrategy(LinkedInStrategy, {...}, 'twitter')
+
+  // Google Auth Strategy
+  useExternalPassportStrategy(GoogleStrategy, config.googleAuth, 'google')
   passport.use('local-signin', new LocalStrategy({
     // Use "email" field instead of "username"
     usernameField: 'email',
