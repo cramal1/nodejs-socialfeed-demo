@@ -61,19 +61,22 @@ module.exports = (app) => {
         console.log('inside fb feeds...')
         nodeify(async ()=> {
             console.log('req.user.facebook.token: ' +req.user.facebook.token)
-            let url = 'https://graph.facebook.com/v2.2/me/feed?access_token=' + req.user.facebook.token
+            let url = 'https://graph.facebook.com/v2.2/me/feed?fields=id,from,likes,message&access_token=' + req.user.facebook.token
             await request.promise(url,
                 nodeifyit(async (error, response, body) => {
                   if (!error && response.statusCode === 200) {
                     let dataFromServer = JSON.parse(body)
                     let data = dataFromServer.data
+                    console.log('Data from FB: ' + JSON.stringify(data))
                     let posts = data.map(post => {
+                          let isLiked = post.likes ? true : false
                           return {
-                            id: post.from.id,
+                            id: post.id,
                             image: '',
                             text: post.message,
                             name: post.from.name,
                             username: req.user.facebook.email,
+                            liked: isLiked,
                             network: networks.facebook
                           }
                        })
@@ -131,34 +134,67 @@ module.exports = (app) => {
     }))
 
     // Like
-    app.post('/like/:id', isLoggedIn, then(async (req, res) => {
+    app.post('/like/:network/:id', isLoggedIn, then(async (req, res) => {
 
-        let twitterClient = new Twitter({
-            consumer_key: twitterConfig.consumerKey,
-            consumer_secret: twitterConfig.consumerSecret,
-            access_token_key: req.user.twitter.token,
-            access_token_secret: req.user.twitter.tokenSecret
-        })
+        let network = req.params.network
         let id = req.params.id
-        await twitterClient.promise.post('favorites/create', {id})
-        res.end()
-
+        if(network === "twitter"){
+            let twitterClient = new Twitter({
+                consumer_key: twitterConfig.consumerKey,
+                consumer_secret: twitterConfig.consumerSecret,
+                access_token_key: req.user.twitter.token,
+                access_token_secret: req.user.twitter.tokenSecret
+            })
+            await twitterClient.promise.post('favorites/create', {id})
+            res.end()
+        } else if(network === "facebook") {
+            console.log('Like the post: ' + id)
+            let postId = id.split('_')
+            let url = 'https://graph.facebook.com/v2.2/' + postId[1] + '/likes?access_token=' + req.user.facebook.token
+            console.log('URL: ' + url)
+             await request.promise.post(url,
+                nodeifyit(async (error, response, body) => {
+                  if (!error && response.statusCode === 200) {
+                    let dataFromServer = JSON.parse(body)
+                    let data = dataFromServer.data
+                    console.log('Data from FB: ' + JSON.stringify(data))
+                  } else {
+                    console.log('Error: ' + error + '\nresponse: ' + response + '\nbody: ' + body)
+                  }
+                res.end()
+                 }, {spread: true}))
+        }
     }))
 
     // Like
-    app.post('/unlike/:id', isLoggedIn, then(async (req, res) => {
-       try{
-           let twitterClient = new Twitter({
-               consumer_key: twitterConfig.consumerKey,
-               consumer_secret: twitterConfig.consumerSecret,
-               access_token_key: req.user.twitter.token,
-               access_token_secret: req.user.twitter.tokenSecret
-           })
-       let id = req.params.id
-       await twitterClient.promise.post('favorites/destroy', {id})
-       res.end()
-        } catch(e){
-            console.log(e)
+    app.post('/unlike/:network/:id', isLoggedIn, then(async (req, res) => {
+        let network = req.params.network
+        let id = req.params.id
+        if(network === "twitter"){
+            let twitterClient = new Twitter({
+                consumer_key: twitterConfig.consumerKey,
+                consumer_secret: twitterConfig.consumerSecret,
+                access_token_key: req.user.twitter.token,
+                access_token_secret: req.user.twitter.tokenSecret
+            })
+            await twitterClient.promise.post('favorites/destroy', {id})
+            res.end()
+        } else if(network === "facebook") {
+            console.log('Remove like for the post: ' + id)
+            let postId = id.split('_')
+            let url = 'https://graph.facebook.com/v2.2/' + postId[1] + '/likes?access_token=' + req.user.facebook.token
+            console.log('URL: ' + url)
+             await request.promise.del(url,
+                nodeifyit(async (error, response, body) => {
+                  if (!error && response.statusCode === 200) {
+                    let dataFromServer = JSON.parse(body)
+                    let data = dataFromServer.data
+                    console.log('Data from FB: ' + JSON.stringify(data))
+                  } else {
+                    console.log('Error: ' + error + '\nresponse: ' + response + '\nbody: ' + body)
+                  }
+                res.end()
+                 }, {spread: true}))
         }
     }))
 

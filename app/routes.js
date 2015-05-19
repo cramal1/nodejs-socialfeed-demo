@@ -39,7 +39,7 @@ module.exports = (app) => {
     }))
 
     // Facebook - Authentication route and callback URL
-	app.get('/auth/facebook', passport.authenticate('facebook', {scope: 'email, publish_actions, user_posts'}))
+	app.get('/auth/facebook', passport.authenticate('facebook', {scope: 'email, publish_actions, user_posts, user_likes, read_stream'}))
 
     app.get('/auth/facebook/callback', passport.authenticate('facebook', {
         successRedirect: '/profile',
@@ -48,7 +48,7 @@ module.exports = (app) => {
     }))
 
     // Authorization route and callback
-    app.get('/connect/facebook', passport.authorize('facebook', {scope: ['email, publish_actions, user_posts']}))
+    app.get('/connect/facebook', passport.authorize('facebook', {scope: ['email, publish_actions, user_posts, user_likes, read_stream']}))
     app.get('/connect/facebook/callback', passport.authorize('facebook', {
         successRedirect: '/profile',
         failureRedirect: '/profile',
