@@ -402,8 +402,10 @@ module.exports = (app) => {
             }
             res.redirect('/timeline')
         } else if (network === 'facebook'){
-            let url = 'https://graph.facebook.com/v2.2/' + id + '?status_type=shared_story&message=' + status + '&access_token=' + req.user.facebook.token
-            console.log('Reply to the post on URL: ' + url)
+            let postId = id.split('_')
+            let url = 'https://graph.facebook.com/v2.2/me/feed?link=https://www.facebook.com/' + postId[0] + '/posts/' + postId[1] +
+                 '&message=' + status + '&access_token=' + req.user.facebook.token
+            console.log('Share post URL: ' + url)
              await request.promise.post(url,
                 nodeifyit(async (error, response, body) => {
                   if (!error && response.statusCode === 200) {
