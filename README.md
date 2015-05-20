@@ -29,7 +29,7 @@ Time spent: 20 hrs
 
 ### Walkthrough
 
-![Demo](https://github.com/cramal1/nodejs-blogger-demo/blob/master/Blogger-Demo_v4.gif)
+![Demo](https://github.com/cramal1/nodejs-socialfeed-demo/blob/master/Social%20feed-Demo_v4.gif)
 
 
 
