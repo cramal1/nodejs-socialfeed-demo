@@ -1,7 +1,9 @@
 let isLoggedIn = require('./middlewares/isLoggedIn')
 let Twitter = require('twitter')
 let Facebook = require('facebook-node-sdk')
-
+// let google = require('googleapis')
+// let plus = google.plus('v1')
+// let OAuth2 = google.auth.OAuth2
 let nodeify = require('bluebird-nodeify')
 // let posts = require('../data/posts')
 let then = require('express-then')
@@ -24,8 +26,25 @@ module.exports = (app) => {
               icon: 'facebook',
               name: 'facebook',
               class: 'btn-primary'
+        },
+        google: {
+            icon: 'google-plus',
+            name: 'Google',
+            class: 'btn-danger'
         }
     }
+
+    // function getGPlusPost(activity) {
+    //     return {
+    //         id: activity.id,
+    //         image: activity.actor.image.url,
+    //         text: activity.object.content,
+    //         name: activity.actor.displayName,
+    //         username: activity.actor.displayName,
+    //         liked: activity.object.plusoners.totalItems > 0 ? true : false,
+    //         network: networks.google
+    //     }
+    // }
 
     function getTwitterFeeds(req, res, next){
         nodeify(async ()=> {
@@ -323,7 +342,7 @@ module.exports = (app) => {
                 liked: tweet.favorited,
                 network: networks.twitter
               }
-            res.render('reply.ejs', {
+            res.render('share.ejs', {
                 post: post
             })
         } else if (network === 'facebook') {
@@ -376,7 +395,11 @@ module.exports = (app) => {
             // }
             let id = req.params.id
             console.log('id: ' + id)
-            await twitterClient.promise.post('statuses/retweet', {id})
+            try{
+                await twitterClient.promise.post('statuses/retweet/' + id)
+            } catch(error){
+                console.log('Error: ' + JSON.stringify(error))
+            }
             res.redirect('/timeline')
         } else if (network === 'facebook'){
             let url = 'https://graph.facebook.com/v2.2/' + id + '?status_type=shared_story&message=' + status + '&access_token=' + req.user.facebook.token
